@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HandsFree Control</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f0f0;
+        }
+        .control-section {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.running {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.stopped {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .history-item {
+            background: #f8f9fa;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .command-box {
+            width: 100%;
+            height: 100px;
+            margin: 10px 0;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            resize: vertical;
+        }
+        .mode-indicator {
+            display: inline-block;
+            padding: 5px 10px;
+            margin: 5px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .mode-indicator.active {
+            background: #28a745;
+            color: white;
+        }
+        .mode-indicator.inactive {
+            background: #6c757d;
+            color: white;
+        }
+        
+        /* Virtual Keyboard Styles */
+        .virtual-keyboard {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border: 2px solid #333;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 1000;
+            display: none;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: auto;
+        }
+        .virtual-keyboard.show {
+            display: block;
+        }
+        .keyboard-row {
+            display: flex;
+            justify-content: center;
+            margin: 5px 0;
+            gap: 5px;
+        }
+        .keyboard-key {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px 20px;
+            margin: 2px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            min-width: 50px;
+            text-align: center;
+            user-select: none;
+            transition: all 0.2s;
+        }
+        .keyboard-key:hover {
+            background: #e9ecef;
+            transform: scale(1.05);
+        }
+        .keyboard-key:active {
+            background: #007bff;
+            color: white;
+            transform: scale(0.95);
+        }
+        .keyboard-key.special {
+            background: #ffc107;
+            color: #212529;
+        }
+        .keyboard-key.space {
+            min-width: 200px;
+        }
+        .keyboard-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .keyboard-close:hover {
+            background: #c82333;
+        }
+        .keyboard-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        /* Mode Control Styles (from this morning) */
+        .mode-controls {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        .mode-controls h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 16px;
+        }
+        .mode-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .mode-button {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            min-width: 140px;
+        }
+        .mode-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .mode-button.active {
+            background: #28a745;
+        }
+        .mode-button.active:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+    <h1>HandsFree Control Center</h1>
+    
+    <!-- Voice Recognition Section -->
+    <div class="control-section">
+        <h2>Voice Recognition</h2>
+        <button id="startVoiceBtn">Start Voice Recognition</button>
+        <button id="stopVoiceBtn">Stop Voice Recognition</button>
+        <button id="listenOnceBtn">Listen Once</button>
+        <button id="speakBtn">Speak Text</button>
+        <button id="clearHistoryBtn">Clear History</button>
+
+        <!-- Mode Control Buttons (from this morning) -->
+        <div class="mode-controls">
+            <h3>Input Modes</h3>
+            <div class="mode-buttons">
+                <button id="typeModeBtn" class="mode-button">Type Mode: OFF</button>
+                <button id="keyModeBtn" class="mode-button">Key Mode: OFF</button>
+            </div>
+        </div>
+
+        <div class="mode-indicator" id="typeModeIndicator">
+            Type Mode: <span id="typeModeStatus">Inactive</span>
+        </div>
+        <div class="mode-indicator" id="keyModeIndicator">
+            Key Mode: <span id="keyModeStatus">Inactive</span>
+        </div>
+
+        <div id="voiceStatus" class="status stopped">Voice Recognition: Stopped</div>
+        <div id="voiceHistory"></div>
+    </div>
+    
+    <!-- Eye Control Section -->
+    <div class="control-section">
+        <h2>Eye Control</h2>
+        <button id="startEyeBtn">Start Eye Control</button>
+        <button id="stopEyeBtn">Stop Eye Control</button>
+        <button id="refreshEyeBtn">Refresh Status</button>
+        <div id="eyeStatus" class="status stopped">Eye Control: Stopped</div>
+    </div>
+    
+    <!-- Virtual Keyboard Section -->
+    <div class="control-section">
+        <h2>Virtual Keyboard</h2>
+        <button id="showKeyboardBtn">Show Virtual Keyboard</button>
+        <button id="hideKeyboardBtn">Hide Virtual Keyboard</button>
+        <button id="testVirtualKeyboardBtn">Test Voice Command</button>
+        <button id="simulateVoiceCommandBtn">Simulate "Virtual Keyboard"</button>
+        <button id="checkQueueStatusBtn">Check Queue Status</button>
+        <div id="keyboardStatus" class="status stopped">Virtual Keyboard: Hidden</div>
+    </div>
+    
+    <!-- Command Input Section -->
+    <div class="control-section">
+        <h2>Command Input</h2>
+        <textarea id="commandBox" class="command-box" placeholder="Type your command here or use voice recognition..."></textarea>
+        <button id="sendCommandBtn">Send Command</button>
+    </div>
+
+    <!-- Virtual Keyboard Overlay -->
+    <div id="virtualKeyboard" class="virtual-keyboard">
+        <button class="keyboard-close" id="keyboardCloseBtn">&times;</button>
+        <div class="keyboard-title">Virtual Keyboard</div>
+        
+        <!-- Row 1: Numbers -->
+        <div class="keyboard-row">
+            <div class="keyboard-key" data-key="1">1</div>
+            <div class="keyboard-key" data-key="2">2</div>
+            <div class="keyboard-key" data-key="3">3</div>
+            <div class="keyboard-key" data-key="4">4</div>
+            <div class="keyboard-key" data-key="5">5</div>
+            <div class="keyboard-key" data-key="6">6</div>
+            <div class="keyboard-key" data-key="7">7</div>
+            <div class="keyboard-key" data-key="8">8</div>
+            <div class="keyboard-key" data-key="9">9</div>
+            <div class="keyboard-key" data-key="0">0</div>
+        </div>
+        
+        <!-- Row 2: QWERTY -->
+        <div class="keyboard-row">
+            <div class="keyboard-key" data-key="q">Q</div>
+            <div class="keyboard-key" data-key="w">W</div>
+            <div class="keyboard-key" data-key="e">E</div>
+            <div class="keyboard-key" data-key="r">R</div>
+            <div class="keyboard-key" data-key="t">T</div>
+            <div class="keyboard-key" data-key="y">Y</div>
+            <div class="keyboard-key" data-key="u">U</div>
+            <div class="keyboard-key" data-key="i">I</div>
+            <div class="keyboard-key" data-key="o">O</div>
+            <div class="keyboard-key" data-key="p">P</div>
+        </div>
+        
+        <!-- Row 3: ASDFG -->
+        <div class="keyboard-row">
+            <div class="keyboard-key" data-key="a">A</div>
+            <div class="keyboard-key" data-key="s">S</div>
+            <div class="keyboard-key" data-key="d">D</div>
+            <div class="keyboard-key" data-key="f">F</div>
+            <div class="keyboard-key" data-key="g">G</div>
+            <div class="keyboard-key" data-key="h">H</div>
+            <div class="keyboard-key" data-key="j">J</div>
+            <div class="keyboard-key" data-key="k">K</div>
+            <div class="keyboard-key" data-key="l">L</div>
+        </div>
+        
+        <!-- Row 4: ZXCVB -->
+        <div class="keyboard-row">
+            <div class="keyboard-key" data-key="z">Z</div>
+            <div class="keyboard-key" data-key="x">X</div>
+            <div class="keyboard-key" data-key="c">C</div>
+            <div class="keyboard-key" data-key="v">V</div>
+            <div class="keyboard-key" data-key="b">B</div>
+            <div class="keyboard-key" data-key="n">N</div>
+            <div class="keyboard-key" data-key="m">M</div>
+        </div>
+        
+        <!-- Row 5: Special Keys -->
+        <div class="keyboard-row">
+            <div class="keyboard-key special" data-key="space" class="space">Space</div>
+            <div class="keyboard-key special" data-key="enter">Enter</div>
+            <div class="keyboard-key special" data-key="backspace">Backspace</div>
+            <div class="keyboard-key special" data-key="tab">Tab</div>
+            <div class="keyboard-key special" data-key="escape">Esc</div>
+        </div>
+        
+        <!-- Row 6: Punctuation -->
+        <div class="keyboard-row">
+            <div class="keyboard-key" data-key=",">,</div>
+            <div class="keyboard-key" data-key=".">.</div>
+            <div class="keyboard-key" data-key="!">!</div>
+            <div class="keyboard-key" data-key="?">?</div>
+            <div class="keyboard-key" data-key=":">:</div>
+            <div class="keyboard-key" data-key=";">;</div>
+            <div class="keyboard-key" data-key="'">'</div>
+            <div class="keyboard-key" data-key='"'>"</div>
+        </div>
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
+</html>
